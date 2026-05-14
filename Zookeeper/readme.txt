@@ -4,7 +4,7 @@ cd C:\zookeeper\conf
 copy zoo_sample.cfg zoo.cfg
 
 随后用cmd跳转到bin文件夹，输入zkServer.cmd
-cd D:\zookeeper\bin
+cd C:\zookeeper\bin
 zkServer.cmd
 
 如果启动时提示 JAVA_HOME is not set，需要配置 Java 环境变量。
