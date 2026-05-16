@@ -39,3 +39,5 @@ build/
 
 ### Local only — not versioned ###
 MasterServer/
+/RegionServer/target/
+/RegionServer/target/

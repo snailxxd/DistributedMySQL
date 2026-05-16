@@ -14,6 +14,7 @@
         <module>Master</module>
         <module>Zookeeper</module>
         <module>RegionServer</module>
+        <module>RegionServer</module>
     </modules>
 
     <properties>
