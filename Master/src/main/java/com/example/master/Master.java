@@ -53,7 +53,7 @@ public final class Master {
         zkClient.connect();
         awaitZkConnected(zkClient, config.getZkSessionTimeout());
 
-        MetadataManager metadataManager = new MetadataManager(zkClient);
+        MetadataManager metadataManager = new MetadataManager(zkClient, config.getMetaZNode());
         TableMetaStore metaStore = new TableMetaStore(metadataManager, zkClient, config.getMetaZNode());
         metaStore.loadFromZk();
 

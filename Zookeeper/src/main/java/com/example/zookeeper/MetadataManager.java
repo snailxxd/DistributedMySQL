@@ -5,37 +5,45 @@ import com.alibaba.fastjson.JSONObject;
 
 public class MetadataManager {
     private final ZookeeperClient zkClient;
-    private static final String META_PATH = "/meta/table_region_map";
-    private static final String META_PARENT_PATH = "/meta";
+    private final String metaPath;
+    private final String metaParentPath;
+    private static final String DEFAULT_META_PATH = "/meta/table_region_map";
 
     public MetadataManager(ZookeeperClient zkClient) {
+        this(zkClient, DEFAULT_META_PATH);
+    }
+
+    public MetadataManager(ZookeeperClient zkClient, String metaPath) {
         this.zkClient = zkClient;
+        this.metaPath = (metaPath == null || metaPath.isEmpty()) ? DEFAULT_META_PATH : metaPath;
+        int lastSlash = this.metaPath.lastIndexOf('/');
+        this.metaParentPath = (lastSlash > 0) ? this.metaPath.substring(0, lastSlash) : "/meta";
     }
 
     public void initMetaNode() throws KeeperException, InterruptedException {
-        // 先创建父节点 /meta
-        zkClient.createPersistentNode(META_PARENT_PATH, "".getBytes());
+        // 先创建父节点
+        zkClient.createPersistentNode(metaParentPath, "".getBytes());
         // 再创建元数据节点
-        zkClient.createPersistentNode(META_PATH, "{}".getBytes());
+        zkClient.createPersistentNode(metaPath, "{}".getBytes());
     }
 
     public void updateTableRegion(String tableName, String regionServerId) throws KeeperException, InterruptedException {
         // 确保节点存在
-        if (!zkClient.exists(META_PATH)) {
+        if (!zkClient.exists(metaPath)) {
             initMetaNode();
         }
-        byte[] data = zkClient.getData(META_PATH, null);
+        byte[] data = zkClient.getData(metaPath, null);
         String currentData = (data == null || data.length == 0) ? "{}" : new String(data);
         JSONObject meta = JSONObject.parseObject(currentData);
         meta.put(tableName, regionServerId);
-        zkClient.setData(META_PATH, meta.toJSONString().getBytes());
+        zkClient.setData(metaPath, meta.toJSONString().getBytes());
     }
 
     public String getRegionServerForTable(String tableName) throws KeeperException, InterruptedException {
-        if (!zkClient.exists(META_PATH)) {
+        if (!zkClient.exists(metaPath)) {
             return null;
         }
-        byte[] data = zkClient.getData(META_PATH, null);
+        byte[] data = zkClient.getData(metaPath, null);
         if (data == null || data.length == 0) {
             return null;
         }
@@ -45,17 +53,17 @@ public class MetadataManager {
     }
 
     public void deleteTableRegion(String tableName) throws KeeperException, InterruptedException {
-        if (!zkClient.exists(META_PATH)) {
+        if (!zkClient.exists(metaPath)) {
             return;
         }
-        byte[] data = zkClient.getData(META_PATH, null);
+        byte[] data = zkClient.getData(metaPath, null);
         if (data == null || data.length == 0) {
             return;
         }
         String currentData = new String(data);
         JSONObject meta = JSONObject.parseObject(currentData);
         meta.remove(tableName);
-        zkClient.setData(META_PATH, meta.toJSONString().getBytes());
+        zkClient.setData(metaPath, meta.toJSONString().getBytes());
     }
 
     public boolean tableExists(String tableName) throws KeeperException, InterruptedException {

@@ -10,12 +10,14 @@ import java.util.List;
 public class ClusterManager {
     private final ZookeeperClient zkClient;
     private final String serverId;
+    private final String basePath;
     private final String nodePath;
     private final String serverAddress;
 
     public ClusterManager(ZookeeperClient zkClient, String serverId, String nodePath) {
         this.zkClient = zkClient;
         this.serverId = serverId;
+        this.basePath = nodePath;
         this.nodePath = nodePath + "/" + serverId;
         try {
             this.serverAddress = InetAddress.getLocalHost().getHostAddress();
@@ -28,6 +30,7 @@ public class ClusterManager {
      * 注册临时节点（RegionServer 启动时调用）
      */
     public void register() throws KeeperException, InterruptedException {
+        zkClient.createPersistentNode(basePath, "".getBytes());
         byte[] data = (serverId + ":" + serverAddress).getBytes();
         zkClient.createEphemeralNode(nodePath, data);
         System.out.println("注册成功: " + nodePath + " -> " + serverAddress);
@@ -48,7 +51,7 @@ public class ClusterManager {
      * @param callback 当服务器列表变化时的回调函数
      */
     public void watchRegionServers(Runnable callback) throws KeeperException, InterruptedException {
-        zkClient.getChildren("/region_servers", event -> {
+        zkClient.getChildren(basePath, event -> {
             if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
                 System.out.println("RegionServer 列表发生变化");
                 callback.run();
@@ -60,7 +63,7 @@ public class ClusterManager {
      * 获取所有存活的 RegionServer 列表
      */
     public List<String> getActiveRegionServers() throws KeeperException, InterruptedException {
-        return zkClient.getChildren("/region_servers", null);
+        return zkClient.getChildren(basePath, null);
     }
 
     public String getServerId() {
