@@ -41,11 +41,25 @@ public class RegionServerClient {
             writer.write(command + "\n");
             writer.flush();
 
-            String line = reader.readLine();
-            if (line == null) {
+            String firstLine = reader.readLine();
+            if (firstLine == null) {
                 throw new IOException("Empty response from RegionServer");
             }
-            return line.trim();
+            if (!"OK".equals(firstLine)) {
+                return firstLine.trim();
+            }
+
+            StringBuilder response = new StringBuilder();
+            response.append(firstLine);
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if ("END".equals(line)) {
+                    response.append("\n").append(line);
+                    break;
+                }
+                response.append("\n").append(line);
+            }
+            return response.toString();
         }
     }
 }

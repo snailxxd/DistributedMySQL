@@ -130,7 +130,22 @@ public class ClientManager {
                 response = sendRaw(redirect, commandLine);
             }
         }
-        return "RegionServer>> " + response;
+        return prefixLines("RegionServer>> ", response);
+    }
+
+    private String prefixLines(String prefix, String text) {
+        if (text == null || text.isEmpty()) {
+            return prefix.trim();
+        }
+        String[] lines = text.split("\r?\n");
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < lines.length; i++) {
+            if (i > 0) {
+                out.append('\n');
+            }
+            out.append(prefix).append(lines[i]);
+        }
+        return out.toString();
     }
 
     /**

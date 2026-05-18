@@ -15,24 +15,26 @@ public final class MySQLStorageEngine {
         public final boolean isQuery;
         public final int rows;
         public final String message;
+        public final String payload;
 
-        private ExecutionResult(boolean success, boolean isQuery, int rows, String message) {
+        private ExecutionResult(boolean success, boolean isQuery, int rows, String message, String payload) {
             this.success = success;
             this.isQuery = isQuery;
             this.rows = rows;
             this.message = message;
+            this.payload = payload;
         }
 
         public static ExecutionResult okUpdate(int rows) {
-            return new ExecutionResult(true, false, rows, "OK");
+            return new ExecutionResult(true, false, rows, "OK", null);
         }
 
-        public static ExecutionResult okQuery(int rows) {
-            return new ExecutionResult(true, true, rows, "OK");
+        public static ExecutionResult okQuery(int rows, String payload) {
+            return new ExecutionResult(true, true, rows, "OK", payload);
         }
 
         public static ExecutionResult error(String msg) {
-            return new ExecutionResult(false, false, 0, msg);
+            return new ExecutionResult(false, false, 0, msg, null);
         }
     }
 
@@ -52,11 +54,29 @@ public final class MySQLStorageEngine {
             boolean isQuery = stmt.execute(sql);
             if (isQuery) {
                 try (ResultSet rs = stmt.getResultSet()) {
-                    int rows = 0;
-                    while (rs.next()) {
-                        rows++;
+                    java.sql.ResultSetMetaData meta = rs.getMetaData();
+                    int colCount = meta.getColumnCount();
+                    StringBuilder table = new StringBuilder();
+                    for (int i = 1; i <= colCount; i++) {
+                        if (i > 1) {
+                            table.append(" | ");
+                        }
+                        table.append(meta.getColumnLabel(i));
                     }
-                    return ExecutionResult.okQuery(rows);
+                    int rowCount = 0;
+                    while (rs.next()) {
+                        table.append("\n");
+                        for (int i = 1; i <= colCount; i++) {
+                            if (i > 1) {
+                                table.append(" | ");
+                            }
+                            Object value = rs.getObject(i);
+                            table.append(value == null ? "NULL" : value.toString());
+                        }
+                        rowCount++;
+                    }
+                    table.append("\nRows: ").append(rowCount);
+                    return ExecutionResult.okQuery(rowCount, table.toString());
                 }
             }
             int updated = stmt.getUpdateCount();
@@ -74,4 +94,3 @@ public final class MySQLStorageEngine {
         return execute(sql);
     }
 }
-

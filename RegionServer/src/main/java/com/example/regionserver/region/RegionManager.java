@@ -2,6 +2,7 @@ package com.example.regionserver.region;
 
 import com.example.regionserver.config.RegionServerConfig;
 import com.example.zookeeper.MetadataManager;
+import com.example.zookeeper.RegionNodeInfo;
 import com.example.zookeeper.ZookeeperClient;
 import org.apache.zookeeper.KeeperException;
 
@@ -102,16 +103,13 @@ public final class RegionManager {
     private String resolveHostPort(String regionId) throws KeeperException, InterruptedException {
         String path = config.getRegionsZNode() + "/" + regionId;
         byte[] data = zkClient.getData(path, null);
-        if (data == null || data.length == 0) {
+        RegionNodeInfo info = RegionNodeInfo.fromBytes(data);
+        if (info == null || info.getHost() == null || info.getHost().isEmpty()) {
             return null;
         }
-        String s = new String(data);
-        int idx = s.indexOf(':');
-        String host = idx >= 0 ? s.substring(idx + 1).trim() : s.trim();
-        if (host.isEmpty()) {
-            return null;
-        }
-        return host + ":" + config.getRegionDefaultPort();
+        int port = (info.getPort() != null && info.getPort() > 0)
+                ? info.getPort()
+                : config.getRegionDefaultPort();
+        return info.getHost() + ":" + port;
     }
 }
-

@@ -1,5 +1,6 @@
 package com.example.master.cluster;
 
+import com.example.zookeeper.RegionNodeInfo;
 import com.example.zookeeper.ZookeeperClient;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -21,7 +22,7 @@ public final class RegionWatcher {
 
     public interface RegionListener {
         /** 子节点新增：传入 regionId 与解析出来的 host。 */
-        void onRegionAdded(String regionId, String host);
+        void onRegionAdded(String regionId, String host, Integer port, String table);
 
         /** 子节点消失：传入 regionId。 */
         void onRegionRemoved(String regionId);
@@ -86,8 +87,11 @@ public final class RegionWatcher {
             safeOnRemoved(regionId);
         }
         for (String regionId : added) {
-            String host = readHost(regionId);
-            safeOnAdded(regionId, host);
+            RegionNodeInfo info = readInfo(regionId);
+            String host = info == null ? null : info.getHost();
+            Integer port = info == null ? null : info.getPort();
+            String table = info == null ? null : info.getTable();
+            safeOnAdded(regionId, host, port, table);
         }
 
         known.clear();
@@ -104,16 +108,11 @@ public final class RegionWatcher {
     }
 
     /** 读取子节点数据，约定格式为 "serverId:host"。 */
-    private String readHost(String regionId) {
+    private RegionNodeInfo readInfo(String regionId) {
         String path = regionsPath + "/" + regionId;
         try {
             byte[] data = zkClient.getData(path, null);
-            if (data == null || data.length == 0) {
-                return null;
-            }
-            String s = new String(data);
-            int idx = s.indexOf(':');
-            return idx >= 0 ? s.substring(idx + 1).trim() : s.trim();
+            return RegionNodeInfo.fromBytes(data);
         } catch (KeeperException | InterruptedException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
@@ -122,9 +121,9 @@ public final class RegionWatcher {
         }
     }
 
-    private void safeOnAdded(String regionId, String host) {
+    private void safeOnAdded(String regionId, String host, Integer port, String table) {
         try {
-            listener.onRegionAdded(regionId, host);
+            listener.onRegionAdded(regionId, host, port, table);
         } catch (RuntimeException ex) {
             System.err.println("onRegionAdded error: " + ex.getMessage());
         }

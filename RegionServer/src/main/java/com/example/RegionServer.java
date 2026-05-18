@@ -28,7 +28,12 @@ public class RegionServer {
         zkClient.connect();
         awaitZkConnected(zkClient, config.getZkSessionTimeout());
 
-        ClusterManager clusterManager = new ClusterManager(zkClient, config.getRegionId(), config.getRegionsZNode());
+        ClusterManager clusterManager = new ClusterManager(
+                zkClient,
+                config.getRegionId(),
+                config.getRegionsZNode(),
+                config.getLogicalTable(),
+                config.getPort());
         clusterManager.register();
 
         MetadataManager metadataManager = new MetadataManager(zkClient, config.getMetaZNode());

@@ -56,6 +56,7 @@ public final class Master {
         MetadataManager metadataManager = new MetadataManager(zkClient, config.getMetaZNode());
         TableMetaStore metaStore = new TableMetaStore(metadataManager, zkClient, config.getMetaZNode());
         metaStore.loadFromZk();
+        metaStore.importFromRegions(config.getRegionsZNode());
 
         RegionRegistry registry = new RegionRegistry();
         LoadBalancer balancer = new LoadBalancer(registry, metaStore);

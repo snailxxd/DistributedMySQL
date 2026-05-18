@@ -41,11 +41,12 @@ public final class FailoverManager implements RegionWatcher.RegionListener {
     }
 
     @Override
-    public synchronized void onRegionAdded(String regionId, String host) {
+    public synchronized void onRegionAdded(String regionId, String host, Integer port, String table) {
+        ensureTableMapping(regionId, table);
         if (registry.isKnown(regionId)) {
-            recover(regionId, host);
+            recover(regionId, host, port);
         } else {
-            discover(regionId, host);
+            discover(regionId, host, port);
         }
     }
 
@@ -55,13 +56,32 @@ public final class FailoverManager implements RegionWatcher.RegionListener {
     }
 
     /** 第一次见到的节点：直接入册。 */
-    private void discover(String regionId, String host) {
+    private void discover(String regionId, String host, Integer port) {
         if (host == null || host.isEmpty()) {
             System.err.println("DISCOVER skipped, missing host for " + regionId);
             return;
         }
-        RegionNode node = registry.addNew(regionId, host, regionDefaultPort);
+        RegionNode node = registry.addNew(regionId, host, resolvePort(port));
         System.out.println("DISCOVER: " + node);
+    }
+
+    private int resolvePort(Integer port) {
+        return (port != null && port > 0) ? port : regionDefaultPort;
+    }
+
+    private void ensureTableMapping(String regionId, String table) {
+        if (table == null || table.isEmpty()) {
+            return;
+        }
+        if (metaStore.exists(table)) {
+            return;
+        }
+        try {
+            metaStore.addTable(table, regionId);
+            System.out.println("IMPORTED: " + table + " -> " + regionId);
+        } catch (Exception e) {
+            System.err.println("IMPORT failed for " + table + ": " + e.getMessage());
+        }
     }
 
     /**
@@ -69,13 +89,14 @@ public final class FailoverManager implements RegionWatcher.RegionListener {
      * 此时该节点本地数据已经被认为是脏的（容灾期间它的表已迁走），
      * 通过 ZK 指令通道下发 CLEAR，让它清空本地存储，并恢复为活跃。
      */
-    private void recover(String regionId, String host) {
+    private void recover(String regionId, String host, Integer port) {
+        int resolvedPort = resolvePort(port);
         if (host != null && !host.isEmpty()) {
-            registry.markActive(regionId, host, regionDefaultPort);
+            registry.markActive(regionId, host, resolvedPort);
         } else {
             registry.markActive(regionId,
                     registry.get(regionId).getHost(),
-                    regionDefaultPort);
+                    resolvedPort);
         }
         System.out.println("RECOVER: " + registry.get(regionId));
         try {

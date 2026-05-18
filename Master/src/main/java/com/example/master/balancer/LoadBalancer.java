@@ -8,7 +8,6 @@ import java.util.List;
 
 /**
  * 负载均衡器：从活跃 RegionServer 中挑选当前承载表数最少的。
- * 与学长版思路一致：表少者优先；并列时取先遍历到的。
  */
 public final class LoadBalancer {
 

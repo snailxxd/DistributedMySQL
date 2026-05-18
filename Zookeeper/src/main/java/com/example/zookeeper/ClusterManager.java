@@ -13,12 +13,24 @@ public class ClusterManager {
     private final String basePath;
     private final String nodePath;
     private final String serverAddress;
+    private final String logicalTable;
+    private final Integer port;
 
     public ClusterManager(ZookeeperClient zkClient, String serverId, String nodePath) {
+        this(zkClient, serverId, nodePath, null, null);
+    }
+
+    public ClusterManager(ZookeeperClient zkClient, String serverId, String nodePath, String logicalTable) {
+        this(zkClient, serverId, nodePath, logicalTable, null);
+    }
+
+    public ClusterManager(ZookeeperClient zkClient, String serverId, String nodePath, String logicalTable, Integer port) {
         this.zkClient = zkClient;
         this.serverId = serverId;
         this.basePath = nodePath;
         this.nodePath = nodePath + "/" + serverId;
+        this.logicalTable = logicalTable;
+        this.port = port;
         try {
             this.serverAddress = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
@@ -30,8 +42,9 @@ public class ClusterManager {
      * 注册临时节点（RegionServer 启动时调用）
      */
     public void register() throws KeeperException, InterruptedException {
-        zkClient.createPersistentNode(basePath, "".getBytes());
-        byte[] data = (serverId + ":" + serverAddress).getBytes();
+        zkClient.createPersistentPath(basePath);
+        RegionNodeInfo info = new RegionNodeInfo(serverId, serverAddress, port, logicalTable);
+        byte[] data = info.toBytes();
         zkClient.createEphemeralNode(nodePath, data);
         System.out.println("注册成功: " + nodePath + " -> " + serverAddress);
     }

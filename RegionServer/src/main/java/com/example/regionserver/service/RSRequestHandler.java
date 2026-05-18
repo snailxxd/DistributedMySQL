@@ -57,9 +57,9 @@ public final class RSRequestHandler {
             return "ERR " + result.message;
         }
         if (result.isQuery) {
-            return "OK " + result.rows + " rows";
+            String payload = (result.payload == null || result.payload.isEmpty()) ? "" : result.payload;
+            return "OK\n" + payload + "\nEND";
         }
         return "OK " + result.rows + " affected";
     }
 }
-

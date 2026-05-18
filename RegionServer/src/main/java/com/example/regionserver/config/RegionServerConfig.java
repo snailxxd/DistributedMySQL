@@ -243,7 +243,7 @@ public final class RegionServerConfig {
             if (logicalTable == null || logicalTable.isEmpty()) {
                 return null;
             }
-            return logicalTable.toLowerCase() + "_region_" + regionIndex;
+            return logicalTable;
         }
     }
 
@@ -256,5 +256,3 @@ public final class RegionServerConfig {
         }
     }
 }
-
-

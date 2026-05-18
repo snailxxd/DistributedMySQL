@@ -2,6 +2,7 @@ package com.example.master.meta;
 
 import com.alibaba.fastjson.JSONObject;
 import com.example.zookeeper.MetadataManager;
+import com.example.zookeeper.RegionNodeInfo;
 import com.example.zookeeper.ZookeeperClient;
 import org.apache.zookeeper.KeeperException;
 
@@ -60,6 +61,30 @@ public final class TableMetaStore {
             regionToTables
                     .computeIfAbsent(regionId, k -> ConcurrentHashMap.newKeySet())
                     .add(table);
+        }
+    }
+
+    public void importFromRegions(String regionsPath) throws KeeperException, InterruptedException {
+        if (regionsPath == null || regionsPath.isEmpty()) {
+            return;
+        }
+        if (!zkClient.exists(regionsPath)) {
+            return;
+        }
+        List<String> regions = zkClient.getChildren(regionsPath, null);
+        for (String regionId : regions) {
+            byte[] data = zkClient.getData(regionsPath + "/" + regionId, null);
+            RegionNodeInfo info = RegionNodeInfo.fromBytes(data);
+            if (info == null) {
+                continue;
+            }
+            String table = info.getTable();
+            if (table == null || table.isEmpty()) {
+                continue;
+            }
+            if (!exists(table)) {
+                addTable(table, regionId);
+            }
         }
     }
 

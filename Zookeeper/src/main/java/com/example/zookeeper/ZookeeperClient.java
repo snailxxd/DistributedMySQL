@@ -38,6 +38,24 @@ public class ZookeeperClient {
         }
     }
 
+    public void createPersistentPath(String path) throws KeeperException, InterruptedException {
+        if (path == null || path.isEmpty() || "/".equals(path)) {
+            return;
+        }
+        String[] parts = path.split("/");
+        StringBuilder current = new StringBuilder();
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            current.append('/').append(part);
+            String currentPath = current.toString();
+            if (zk.exists(currentPath, false) == null) {
+                zk.create(currentPath, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            }
+        }
+    }
+
     public List<String> getChildren(String path, Watcher watcher) throws KeeperException, InterruptedException {
         return zk.getChildren(path, watcher);
     }
